@@ -8,11 +8,16 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
+    <!-- exe 파일과 작업 표시줄에 쓰이는 앱 아이콘 (창 제목 표시줄은 MainWindow의 Icon) -->
+    <ApplicationIcon>Assets\app.ico</ApplicationIcon>
   </PropertyGroup>
 
   <ItemGroup>
     <Resource Include="Assets\auth.jpg" />
     <Resource Include="Assets\logo-mask.png" />
+    <Resource Include="Assets\app.ico" />
+    <!-- logo-mask.png, app.ico를 만든 원본 이미지 (빌드에는 쓰지 않음) -->
+    <None Include="Assets\logo-source.png" />
     <!-- 앱 안의 YouTube 플레이어 페이지 -->
     <None Update="Web\player.html" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
