@@ -1,0 +1,14 @@
+﻿<UserControl x:Class="MyPlaylist.Client.Views.PrivatePage"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+        <TextBlock Text="&#xE72E;" FontFamily="Segoe MDL2 Assets" FontSize="52" HorizontalAlignment="Center"
+                   Foreground="{DynamicResource TextBrush}"/>
+        <TextBlock Text="비공개 플레이리스트입니다" Style="{StaticResource TitleText}" Margin="0,24,0,0"
+                   HorizontalAlignment="Center"/>
+        <TextBlock Text="만든 사람만 볼 수 있어요." Style="{StaticResource SubText}" FontSize="17" Margin="0,12,0,0"
+                   HorizontalAlignment="Center"/>
+        <Button Content="‹  목록으로 돌아가기" Style="{StaticResource LinkButton}" Margin="0,28,0,0" HorizontalAlignment="Center"
+                Click="Back_Click" AutomationProperties.AutomationId="PrivateBack"/>
+    </StackPanel>
+</UserControl>

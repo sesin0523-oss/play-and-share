@@ -1,0 +1,49 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
+  #p { width: 100%; height: 100%; }
+</style>
+</head>
+<body>
+<div id="p"></div>
+<script src="https://www.youtube.com/iframe_api"></script>
+<script>
+  // C#(Services/Player.cs)이 아래 함수를 호출하고, 상태는 postMessage로 C#에 알린다.
+  let player;
+  let ready = false;
+  function post(message) {
+    chrome.webview.postMessage(JSON.stringify(message));
+  }
+  function onYouTubeIframeAPIReady() {
+    player = new YT.Player('p', {
+      width: '100%',
+      height: '100%',
+      playerVars: { autoplay: 1, playsinline: 1, rel: 0, origin: location.origin },
+      events: {
+        onReady: () => { ready = true; post({ type: 'ready' }); },
+        onStateChange: e => post({ type: 'state', state: e.data }),
+        onError: e => post({ type: 'error', code: e.data })
+      }
+    });
+  }
+  function play(id, start) { player.loadVideoById({ videoId: id, startSeconds: start || 0 }); }
+  function pause() { player.pauseVideo(); }
+  function resume() { player.playVideo(); }
+  function stop() { player.stopVideo(); }
+  function restart() { player.seekTo(0, true); player.playVideo(); }
+  function seek(ratio) {
+    const duration = player.getDuration();
+    if (duration > 0) player.seekTo(duration * ratio, true);
+  }
+  function setMuted(muted) { muted ? player.mute() : player.unMute(); }
+  // 진행 막대와 시간 표시용
+  setInterval(() => {
+    if (ready)
+      post({ type: 'time', cur: player.getCurrentTime() || 0, dur: player.getDuration() || 0 });
+  }, 500);
+</script>
+</body>
+</html>

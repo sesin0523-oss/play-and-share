@@ -1,0 +1,18 @@
+<!-- 어두운 테마: 시안의 디자인 기준 -->
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <SolidColorBrush x:Key="BackgroundBrush" Color="#0B0B0C"/>
+    <SolidColorBrush x:Key="DialogBrush" Color="#141416"/>
+    <SolidColorBrush x:Key="TextBrush" Color="#EDEBE6"/>
+    <SolidColorBrush x:Key="SubTextBrush" Color="#8A8884"/>
+    <SolidColorBrush x:Key="GoldBrush" Color="#C9B48A"/>
+    <SolidColorBrush x:Key="DangerBrush" Color="#B4574E"/>
+    <SolidColorBrush x:Key="LineBrush" Color="#2C2C2E"/>
+    <SolidColorBrush x:Key="PlaceholderBrush" Color="#18181A"/>
+    <!-- 골드 버튼 위의 글자 -->
+    <SolidColorBrush x:Key="OnGoldBrush" Color="#111112"/>
+    <!-- 목록 한 줄에 마우스를 올렸을 때 -->
+    <SolidColorBrush x:Key="HoverBrush" Color="#141416"/>
+    <!-- 확인 창 뒤를 가리는 막 -->
+    <SolidColorBrush x:Key="OverlayBrush" Color="#B3000000"/>
+</ResourceDictionary>

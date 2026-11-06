@@ -1,0 +1,511 @@
+{
+  "info": {
+    "name": "My Playlist CRUD 테스트",
+    "description": "회원, 플레이리스트, 곡의 CRUD를 순서대로 테스트합니다. 앞 요청의 결과를 뒤 요청이 사용하므로 Collection Runner로 전체를 순서대로 실행하세요. 실행할 때마다 새 회원을 만들고 마지막에 탈퇴합니다.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:5080" },
+    { "key": "password", "value": "password123" }
+  ],
+  "item": [
+    {
+      "name": "0. 준비",
+      "item": [
+        {
+          "name": "로그아웃 (이전 실행의 쿠키 정리)",
+          "event": [
+            { "listen": "prerequest", "script": { "type": "text/javascript", "exec": [
+              "var runId = 'pm' + new Date().getTime();",
+              "pm.collectionVariables.set('runId', runId);",
+              "pm.collectionVariables.set('userName', runId);",
+              "pm.collectionVariables.set('otherName', runId + '_other');"
+            ] } },
+            { "listen": "test", "script": { "type": "text/javascript", "exec": [
+              "pm.test('204 No Content', function () { pm.response.to.have.status(204); });"
+            ] } }
+          ],
+          "request": { "method": "POST", "url": "{{baseUrl}}/api/users/logout" }
+        },
+        {
+          "name": "[등록 실패] 비로그인으로 플레이리스트 생성 - 401",
+          "event": [
+            { "listen": "test", "script": { "type": "text/javascript", "exec": [
+              "pm.test('401 Unauthorized', function () { pm.response.to.have.status(401); });"
+            ] } }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [ { "key": "Content-Type", "value": "application/json" } ],
+            "body": { "mode": "raw", "raw": "{ \"playlistTitle\": \"비로그인\", \"isPublic\": true }", "options": { "raw": { "language": "json" } } },
+            "url": "{{baseUrl}}/api/playlists"
+          }
+        }
+      ]
+    },
+    {
+      "name": "1. 회원 CRUD",
+      "item": [
+        {
+          "name": "[등록] 회원가입 - 201",
+          "event": [
+            { "listen": "test", "script": { "type": "text/javascript", "exec": [
+              "pm.test('201 Created', function () { pm.response.to.have.status(201); });",
+              "var body = pm.response.json();",
+              "pm.test('아이디가 그대로 반환된다', function () { pm.expect(body.userName).to.eql(pm.collectionVariables.get('userName')); });",
+              "pm.test('비밀번호는 응답에 없다', function () { pm.expect(body.password === undefined && body.userPw === undefined).to.eql(true); });",
+              "pm.collectionVariables.set('userId', body.userId);"
+            ] } }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [ { "key": "Content-Type", "value": "application/json" } ],
+            "body": { "mode": "raw", "raw": "{ \"userName\": \"{{userName}}\", \"password\": \"{{password}}\" }", "options": { "raw": { "language": "json" } } },
+            "url": "{{baseUrl}}/api/users/signup"
+          }
+        },
+        {
+          "name": "[등록 실패] 같은 아이디로 가입 - 409",
+          "event": [
+            { "listen": "test", "script": { "type": "text/javascript", "exec": [
+              "pm.test('409 Conflict', function () { pm.response.to.have.status(409); });"
+            ] } }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [ { "key": "Content-Type", "value": "application/json" } ],
+            "body": { "mode": "raw", "raw": "{ \"userName\": \"{{userName}}\", \"password\": \"{{password}}\" }", "options": { "raw": { "language": "json" } } },
+            "url": "{{baseUrl}}/api/users/signup"
+          }
+        },
+        {
+          "name": "[등록 실패] 비밀번호 8자 미만 - 400",
+          "event": [
+            { "listen": "test", "script": { "type": "text/javascript", "exec": [
+              "pm.test('400 Bad Request', function () { pm.response.to.have.status(400); });"
+            ] } }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [ { "key": "Content-Type", "value": "application/json" } ],
+            "body": { "mode": "raw", "raw": "{ \"userName\": \"{{runId}}_short\", \"password\": \"1234567\" }", "options": { "raw": { "language": "json" } } },
+            "url": "{{baseUrl}}/api/users/signup"
+          }
+        },
+        {
+          "name": "로그인 실패 (틀린 비밀번호) - 401",
+          "event": [
+            { "listen": "test", "script": { "type": "text/javascript", "exec": [
+              "pm.test('401 Unauthorized', function () { pm.response.to.have.status(401); });"
+            ] } }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [ { "key": "Content-Type", "value": "application/json" } ],
+            "body": { "mode": "raw", "raw": "{ \"userName\": \"{{userName}}\", \"password\": \"wrongpassword\" }", "options": { "raw": { "language": "json" } } },
+            "url": "{{baseUrl}}/api/users/login"
+          }
+        },
+        {
+          "name": "로그인 - 200 (쿠키 발급)",
+          "event": [
+            { "listen": "test", "script": { "type": "text/javascript", "exec": [
+              "pm.test('200 OK', function () { pm.response.to.have.status(200); });",
+              "pm.test('가입한 회원으로 로그인된다', function () { pm.expect(String(pm.response.json().userId)).to.eql(String(pm.collectionVariables.get('userId'))); });"
+            ] } }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [ { "key": "Content-Type", "value": "application/json" } ],
+            "body": { "mode": "raw", "raw": "{ \"userName\": \"{{userName}}\", \"password\": \"{{password}}\" }", "options": { "raw": { "language": "json" } } },
+            "url": "{{baseUrl}}/api/users/login"
+          }
+        },
+        {
+          "name": "[조회] 내 회원정보 - 200",
+          "event": [
+            { "listen": "test", "script": { "type": "text/javascript", "exec": [
+              "pm.test('200 OK', function () { pm.response.to.have.status(200); });",
+              "pm.test('내 아이디가 조회된다', function () { pm.expect(pm.response.json().userName).to.eql(pm.collectionVariables.get('userName')); });"
+            ] } }
+          ],
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/users/{{userId}}" }
+        },
+        {
+          "name": "[수정] 아이디 변경 - 204",
+          "event": [
+            { "listen": "test", "script": { "type": "text/javascript", "exec": [
+              "pm.test('204 No Content', function () { pm.response.to.have.status(204); });",
+              "pm.collectionVariables.set('userName', pm.collectionVariables.get('userName') + '_new');"
+            ] } }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [ { "key": "Content-Type", "value": "application/json" } ],
+            "body": { "mode": "raw", "raw": "{ \"userName\": \"{{userName}}_new\" }", "options": { "raw": { "language": "json" } } },
+            "url": "{{baseUrl}}/api/users/{{userId}}"
+          }
+        },
+        {
+          "name": "[조회] 수정 결과 확인 - 200",
+          "event": [
+            { "listen": "test", "script": { "type": "text/javascript", "exec": [
+              "pm.test('200 OK', function () { pm.response.to.have.status(200); });",
+              "pm.test('바뀐 아이디가 조회된다', function () { pm.expect(pm.response.json().userName).to.eql(pm.collectionVariables.get('userName')); });"
+            ] } }
+          ],
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/users/{{userId}}" }
+        }
+      ]
+    },
+    {
+      "name": "2. 플레이리스트 CRUD",
+      "item": [
+        {
+          "name": "[등록] 플레이리스트 생성 - 201",
+          "event": [
+            { "listen": "test", "script": { "type": "text/javascript", "exec": [
+              "pm.test('201 Created', function () { pm.response.to.have.status(201); });",
+              "var body = pm.response.json();",
+              "pm.test('소유자가 로그인한 회원이다', function () { pm.expect(String(body.userId)).to.eql(String(pm.collectionVariables.get('userId'))); });",
+              "pm.collectionVariables.set('playlistId', body.playlistId);"
+            ] } }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [ { "key": "Content-Type", "value": "application/json" } ],
+            "body": { "mode": "raw", "raw": "{ \"playlistTitle\": \"{{runId}} 새벽 감성\", \"description\": \"잠 안 올 때 듣는 노래\", \"isPublic\": true }", "options": { "raw": { "language": "json" } } },
+            "url": "{{baseUrl}}/api/playlists"
+          }
+        },
+        {
+          "name": "[등록 실패] 제목 없음 - 400",
+          "event": [
+            { "listen": "test", "script": { "type": "text/javascript", "exec": [
+              "pm.test('400 Bad Request', function () { pm.response.to.have.status(400); });"
+            ] } }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [ { "key": "Content-Type", "value": "application/json" } ],
+            "body": { "mode": "raw", "raw": "{ \"playlistTitle\": \"\", \"isPublic\": true }", "options": { "raw": { "language": "json" } } },
+            "url": "{{baseUrl}}/api/playlists"
+          }
+        },
+        {
+          "name": "[조회] 상세 조회 - 200",
+          "event": [
+            { "listen": "test", "script": { "type": "text/javascript", "exec": [
+              "pm.test('200 OK', function () { pm.response.to.have.status(200); });",
+              "var playlist = pm.response.json().playlist;",
+              "pm.test('만든 플레이리스트가 조회된다', function () { pm.expect(String(playlist.playlistId)).to.eql(String(pm.collectionVariables.get('playlistId'))); });",
+              "pm.test('조회수가 1이 된다', function () { pm.expect(playlist.viewCount).to.eql(1); });"
+            ] } }
+          ],
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/playlists/{{playlistId}}" }
+        },
+        {
+          "name": "[조회] 키워드 검색 - 200",
+          "event": [
+            { "listen": "test", "script": { "type": "text/javascript", "exec": [
+              "pm.test('200 OK', function () { pm.response.to.have.status(200); });",
+              "pm.test('이번 실행에서 만든 1건만 검색된다', function () { pm.expect(pm.response.json().totalCount).to.eql(1); });"
+            ] } }
+          ],
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/playlists?keyword={{runId}}&sort=latest&page=1&size=20" }
+        },
+        {
+          "name": "[조회] 내 플레이리스트 목록 - 200",
+          "event": [
+            { "listen": "test", "script": { "type": "text/javascript", "exec": [
+              "pm.test('200 OK', function () { pm.response.to.have.status(200); });",
+              "pm.test('내 플레이리스트가 1개 있다', function () { pm.expect(pm.response.json().length).to.eql(1); });"
+            ] } }
+          ],
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/users/me/playlists" }
+        },
+        {
+          "name": "[조회 실패] 없는 플레이리스트 - 404",
+          "event": [
+            { "listen": "test", "script": { "type": "text/javascript", "exec": [
+              "pm.test('404 Not Found', function () { pm.response.to.have.status(404); });"
+            ] } }
+          ],
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/playlists/2147483647" }
+        },
+        {
+          "name": "[수정] 제목과 설명 변경 - 204",
+          "event": [
+            { "listen": "test", "script": { "type": "text/javascript", "exec": [
+              "pm.test('204 No Content', function () { pm.response.to.have.status(204); });"
+            ] } }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [ { "key": "Content-Type", "value": "application/json" } ],
+            "body": { "mode": "raw", "raw": "{ \"playlistTitle\": \"{{runId}} 수정한 제목\", \"description\": \"수정한 설명\", \"isPublic\": true }", "options": { "raw": { "language": "json" } } },
+            "url": "{{baseUrl}}/api/playlists/{{playlistId}}"
+          }
+        },
+        {
+          "name": "[조회] 수정 결과 확인 - 200",
+          "event": [
+            { "listen": "test", "script": { "type": "text/javascript", "exec": [
+              "pm.test('200 OK', function () { pm.response.to.have.status(200); });",
+              "var playlist = pm.response.json().playlist;",
+              "pm.test('제목이 바뀌었다', function () { pm.expect(playlist.playlistTitle).to.eql(pm.collectionVariables.get('runId') + ' 수정한 제목'); });",
+              "pm.test('설명이 바뀌었다', function () { pm.expect(playlist.description).to.eql('수정한 설명'); });"
+            ] } }
+          ],
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/playlists/{{playlistId}}" }
+        }
+      ]
+    },
+    {
+      "name": "3. 곡 CRUD",
+      "item": [
+        {
+          "name": "[등록] 곡 추가 - 201",
+          "event": [
+            { "listen": "test", "script": { "type": "text/javascript", "exec": [
+              "pm.test('201 Created', function () { pm.response.to.have.status(201); });",
+              "var body = pm.response.json();",
+              "pm.test('첫 곡의 순서는 1이다', function () { pm.expect(body.sortOrder).to.eql(1); });",
+              "pm.test('서버가 유튜브 주소를 만든다', function () { pm.expect(body.youtubeUrl).to.eql('https://www.youtube.com/watch?v=BzYnNdJhZQw'); });",
+              "pm.collectionVariables.set('trackId', body.trackId);"
+            ] } }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [ { "key": "Content-Type", "value": "application/json" } ],
+            "body": { "mode": "raw", "raw": "{ \"youtubeVideoId\": \"BzYnNdJhZQw\", \"musicTitle\": \"밤편지\", \"artist\": \"아이유\" }", "options": { "raw": { "language": "json" } } },
+            "url": "{{baseUrl}}/api/playlists/{{playlistId}}/tracks"
+          }
+        },
+        {
+          "name": "[등록 실패] 잘못된 영상 ID - 400",
+          "event": [
+            { "listen": "test", "script": { "type": "text/javascript", "exec": [
+              "pm.test('400 Bad Request', function () { pm.response.to.have.status(400); });"
+            ] } }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [ { "key": "Content-Type", "value": "application/json" } ],
+            "body": { "mode": "raw", "raw": "{ \"youtubeVideoId\": \"bad id!\", \"musicTitle\": \"밤편지\" }", "options": { "raw": { "language": "json" } } },
+            "url": "{{baseUrl}}/api/playlists/{{playlistId}}/tracks"
+          }
+        },
+        {
+          "name": "[조회] 곡 목록 - 200",
+          "event": [
+            { "listen": "test", "script": { "type": "text/javascript", "exec": [
+              "pm.test('200 OK', function () { pm.response.to.have.status(200); });",
+              "var list = pm.response.json();",
+              "pm.test('곡이 1개 있다', function () { pm.expect(list.length).to.eql(1); });",
+              "pm.test('추가한 곡이 조회된다', function () { pm.expect(list[0].musicTitle).to.eql('밤편지'); });"
+            ] } }
+          ],
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/playlists/{{playlistId}}/tracks" }
+        },
+        {
+          "name": "[수정] 곡 제목 변경 - 204",
+          "event": [
+            { "listen": "test", "script": { "type": "text/javascript", "exec": [
+              "pm.test('204 No Content', function () { pm.response.to.have.status(204); });"
+            ] } }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [ { "key": "Content-Type", "value": "application/json" } ],
+            "body": { "mode": "raw", "raw": "{ \"youtubeVideoId\": \"BzYnNdJhZQw\", \"musicTitle\": \"밤편지 (수정)\", \"artist\": \"아이유\" }", "options": { "raw": { "language": "json" } } },
+            "url": "{{baseUrl}}/api/playlists/{{playlistId}}/tracks/{{trackId}}"
+          }
+        },
+        {
+          "name": "[조회] 수정 결과 확인 - 200",
+          "event": [
+            { "listen": "test", "script": { "type": "text/javascript", "exec": [
+              "pm.test('200 OK', function () { pm.response.to.have.status(200); });",
+              "pm.test('곡 제목이 바뀌었다', function () { pm.expect(pm.response.json()[0].musicTitle).to.eql('밤편지 (수정)'); });"
+            ] } }
+          ],
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/playlists/{{playlistId}}/tracks" }
+        },
+        {
+          "name": "[삭제] 곡 삭제 - 204",
+          "event": [
+            { "listen": "test", "script": { "type": "text/javascript", "exec": [
+              "pm.test('204 No Content', function () { pm.response.to.have.status(204); });"
+            ] } }
+          ],
+          "request": { "method": "DELETE", "url": "{{baseUrl}}/api/playlists/{{playlistId}}/tracks/{{trackId}}" }
+        },
+        {
+          "name": "[조회] 삭제 결과 확인 - 200",
+          "event": [
+            { "listen": "test", "script": { "type": "text/javascript", "exec": [
+              "pm.test('200 OK', function () { pm.response.to.have.status(200); });",
+              "pm.test('곡 목록이 비어 있다', function () { pm.expect(pm.response.json().length).to.eql(0); });"
+            ] } }
+          ],
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/playlists/{{playlistId}}/tracks" }
+        }
+      ]
+    },
+    {
+      "name": "4. 권한 확인",
+      "item": [
+        {
+          "name": "다른 회원 가입 - 201",
+          "event": [
+            { "listen": "test", "script": { "type": "text/javascript", "exec": [
+              "pm.test('201 Created', function () { pm.response.to.have.status(201); });",
+              "pm.collectionVariables.set('otherUserId', pm.response.json().userId);"
+            ] } }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [ { "key": "Content-Type", "value": "application/json" } ],
+            "body": { "mode": "raw", "raw": "{ \"userName\": \"{{otherName}}\", \"password\": \"{{password}}\" }", "options": { "raw": { "language": "json" } } },
+            "url": "{{baseUrl}}/api/users/signup"
+          }
+        },
+        {
+          "name": "다른 회원으로 로그인 - 200",
+          "event": [
+            { "listen": "test", "script": { "type": "text/javascript", "exec": [
+              "pm.test('200 OK', function () { pm.response.to.have.status(200); });",
+              "pm.test('다른 회원으로 바뀌었다', function () { pm.expect(String(pm.response.json().userId)).to.eql(String(pm.collectionVariables.get('otherUserId'))); });"
+            ] } }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [ { "key": "Content-Type", "value": "application/json" } ],
+            "body": { "mode": "raw", "raw": "{ \"userName\": \"{{otherName}}\", \"password\": \"{{password}}\" }", "options": { "raw": { "language": "json" } } },
+            "url": "{{baseUrl}}/api/users/login"
+          }
+        },
+        {
+          "name": "[수정 실패] 남의 플레이리스트 수정 - 403",
+          "event": [
+            { "listen": "test", "script": { "type": "text/javascript", "exec": [
+              "pm.test('403 Forbidden', function () { pm.response.to.have.status(403); });"
+            ] } }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [ { "key": "Content-Type", "value": "application/json" } ],
+            "body": { "mode": "raw", "raw": "{ \"playlistTitle\": \"해킹\", \"isPublic\": true }", "options": { "raw": { "language": "json" } } },
+            "url": "{{baseUrl}}/api/playlists/{{playlistId}}"
+          }
+        },
+        {
+          "name": "[삭제 실패] 남의 플레이리스트 삭제 - 403",
+          "event": [
+            { "listen": "test", "script": { "type": "text/javascript", "exec": [
+              "pm.test('403 Forbidden', function () { pm.response.to.have.status(403); });"
+            ] } }
+          ],
+          "request": { "method": "DELETE", "url": "{{baseUrl}}/api/playlists/{{playlistId}}" }
+        },
+        {
+          "name": "[조회 실패] 남의 회원정보 조회 - 403",
+          "event": [
+            { "listen": "test", "script": { "type": "text/javascript", "exec": [
+              "pm.test('403 Forbidden', function () { pm.response.to.have.status(403); });"
+            ] } }
+          ],
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/users/{{userId}}" }
+        },
+        {
+          "name": "[삭제] 다른 회원 탈퇴 - 204",
+          "event": [
+            { "listen": "test", "script": { "type": "text/javascript", "exec": [
+              "pm.test('204 No Content', function () { pm.response.to.have.status(204); });"
+            ] } }
+          ],
+          "request": { "method": "DELETE", "url": "{{baseUrl}}/api/users/{{otherUserId}}" }
+        },
+        {
+          "name": "원래 회원으로 다시 로그인 - 200",
+          "event": [
+            { "listen": "test", "script": { "type": "text/javascript", "exec": [
+              "pm.test('200 OK', function () { pm.response.to.have.status(200); });"
+            ] } }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [ { "key": "Content-Type", "value": "application/json" } ],
+            "body": { "mode": "raw", "raw": "{ \"userName\": \"{{userName}}\", \"password\": \"{{password}}\" }", "options": { "raw": { "language": "json" } } },
+            "url": "{{baseUrl}}/api/users/login"
+          }
+        }
+      ]
+    },
+    {
+      "name": "5. 삭제",
+      "item": [
+        {
+          "name": "[삭제] 플레이리스트 삭제 - 204",
+          "event": [
+            { "listen": "test", "script": { "type": "text/javascript", "exec": [
+              "pm.test('204 No Content', function () { pm.response.to.have.status(204); });"
+            ] } }
+          ],
+          "request": { "method": "DELETE", "url": "{{baseUrl}}/api/playlists/{{playlistId}}" }
+        },
+        {
+          "name": "[조회 실패] 삭제한 플레이리스트 - 404",
+          "event": [
+            { "listen": "test", "script": { "type": "text/javascript", "exec": [
+              "pm.test('404 Not Found', function () { pm.response.to.have.status(404); });"
+            ] } }
+          ],
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/playlists/{{playlistId}}" }
+        },
+        {
+          "name": "[삭제 실패] 이미 삭제한 플레이리스트 - 404",
+          "event": [
+            { "listen": "test", "script": { "type": "text/javascript", "exec": [
+              "pm.test('404 Not Found', function () { pm.response.to.have.status(404); });"
+            ] } }
+          ],
+          "request": { "method": "DELETE", "url": "{{baseUrl}}/api/playlists/{{playlistId}}" }
+        },
+        {
+          "name": "[삭제] 회원탈퇴 - 204",
+          "event": [
+            { "listen": "test", "script": { "type": "text/javascript", "exec": [
+              "pm.test('204 No Content', function () { pm.response.to.have.status(204); });"
+            ] } }
+          ],
+          "request": { "method": "DELETE", "url": "{{baseUrl}}/api/users/{{userId}}" }
+        },
+        {
+          "name": "[조회 실패] 탈퇴 후 회원정보 조회 - 401",
+          "event": [
+            { "listen": "test", "script": { "type": "text/javascript", "exec": [
+              "pm.test('401 Unauthorized', function () { pm.response.to.have.status(401); });"
+            ] } }
+          ],
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/users/{{userId}}" }
+        },
+        {
+          "name": "탈퇴한 회원 로그인 - 401",
+          "event": [
+            { "listen": "test", "script": { "type": "text/javascript", "exec": [
+              "pm.test('401 Unauthorized', function () { pm.response.to.have.status(401); });"
+            ] } }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [ { "key": "Content-Type", "value": "application/json" } ],
+            "body": { "mode": "raw", "raw": "{ \"userName\": \"{{userName}}\", \"password\": \"{{password}}\" }", "options": { "raw": { "language": "json" } } },
+            "url": "{{baseUrl}}/api/users/login"
+          }
+        }
+      ]
+    }
+  ]
+}

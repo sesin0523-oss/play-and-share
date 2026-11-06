@@ -1,0 +1,16 @@
+﻿<UserControl x:Class="MyPlaylist.Client.Views.Pager"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+        <Button x:Name="PreviousButton" Style="{StaticResource LinkButton}" Padding="10,4" Click="Previous_Click"
+                AutomationProperties.AutomationId="PagerPrevious" AutomationProperties.Name="이전 페이지">
+            <TextBlock Text="&#xE76B;" FontFamily="Segoe MDL2 Assets" FontSize="14"/>
+        </Button>
+        <TextBlock x:Name="PageLabel" Foreground="{DynamicResource GoldBrush}" FontSize="22" FontWeight="Light"
+                   Margin="10,0" VerticalAlignment="Center" AutomationProperties.AutomationId="PagerNumber"/>
+        <Button x:Name="NextButton" Style="{StaticResource LinkButton}" Padding="10,4" Click="Next_Click"
+                AutomationProperties.AutomationId="PagerNext" AutomationProperties.Name="다음 페이지">
+            <TextBlock Text="&#xE76C;" FontFamily="Segoe MDL2 Assets" FontSize="14"/>
+        </Button>
+    </StackPanel>
+</UserControl>
