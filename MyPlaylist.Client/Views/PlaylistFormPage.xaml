@@ -10,13 +10,39 @@
         </Grid.RowDefinitions>
         <Button Content="‹  돌아가기" Style="{StaticResource LinkButton}" HorizontalAlignment="Left" Click="Cancel_Click"/>
         <TextBlock x:Name="TitleLabel" Grid.Row="1" Style="{StaticResource TitleText}" Margin="0,8,0,24"/>
-        <Grid Grid.Row="2" MaxWidth="980" HorizontalAlignment="Stretch">
+        <ScrollViewer x:Name="FormScroll" Grid.Row="2" VerticalScrollBarVisibility="Auto" Margin="0,0,0,16">
+        <StackPanel MaxWidth="980">
+        <!-- AI 초안: 분위기 한 문장 → 제목·소개·태그·곡 후보 (새로 만들 때만) -->
+        <Border x:Name="AiPanel" BorderBrush="{DynamicResource GoldBrush}" BorderThickness="1" CornerRadius="12"
+                Padding="26,20,26,18" Margin="0,0,0,30">
+            <StackPanel>
+                <TextBlock Text="✦  AI로 초안 만들기" FontSize="18" Foreground="{DynamicResource GoldBrush}"/>
+                <TextBlock Style="{StaticResource SubText}" Margin="0,6,0,14" TextWrapping="Wrap"
+                           Text="듣고 싶은 분위기를 한 문장으로 적으면 제목·설명·태그와 곡 후보를 채워 드려요. 곡은 모두 실제 YouTube 영상이에요."/>
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBox x:Name="AiPromptBox" Style="{StaticResource UnderlineBox}" MaxLength="200"
+                             TextChanged="AiPromptBox_TextChanged" KeyDown="AiPromptBox_KeyDown"
+                             AutomationProperties.AutomationId="AiPromptBox" AutomationProperties.Name="AI 초안 분위기 입력"/>
+                    <TextBlock x:Name="AiPromptHint" Text="예: 비 오는 밤에 혼자 듣기 좋은 잔잔한 인디" FontSize="15" IsHitTestVisible="False"
+                               Foreground="{DynamicResource SubTextBrush}" Margin="4,0,0,0" VerticalAlignment="Center"/>
+                    <Button x:Name="AiButton" Grid.Column="1" Content="초안 만들기" Style="{StaticResource GoldButton}"
+                            Margin="20,0,0,0" Click="AiDraft_Click" AutomationProperties.AutomationId="AiDraftButton"/>
+                </Grid>
+                <TextBlock x:Name="AiStatus" Style="{StaticResource SubText}" Margin="0,12,0,0" TextWrapping="Wrap" Visibility="Collapsed"/>
+            </StackPanel>
+        </Border>
+        <Grid HorizontalAlignment="Stretch">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="130"/>
                 <ColumnDefinition Width="*"/>
                 <ColumnDefinition Width="90"/>
             </Grid.ColumnDefinitions>
             <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="Auto"/>
@@ -69,9 +95,20 @@
                 </Popup>
             </StackPanel>
             <TextBlock Grid.Row="4" Grid.Column="2" Text="최대 3개" Style="{StaticResource SubText}" Margin="16,30,0,0"/>
-            <TextBlock x:Name="ErrorLabel" Grid.Row="5" Grid.Column="1" Style="{StaticResource ErrorText}" Margin="0,12,0,0"
+            <!-- AI가 고른 곡 후보: 체크한 곡만 만들기와 함께 담는다. -->
+            <TextBlock x:Name="AiTracksLabel" Grid.Row="5" Text="곡 후보" Style="{StaticResource BodyText}" FontSize="17"
+                       Margin="0,30,0,0" Visibility="Collapsed"/>
+            <StackPanel x:Name="AiTracksPanel" Grid.Row="5" Grid.Column="1" Margin="0,30,0,0" Visibility="Collapsed">
+                <TextBlock x:Name="AiTracksInfo" Style="{StaticResource SubText}" TextWrapping="Wrap" Margin="0,0,0,8"/>
+                <StackPanel x:Name="AiTrackList"/>
+            </StackPanel>
+            <TextBlock x:Name="AiTracksCount" Grid.Row="5" Grid.Column="2" Style="{StaticResource SubText}" Margin="16,30,0,0"
+                       Visibility="Collapsed"/>
+            <TextBlock x:Name="ErrorLabel" Grid.Row="6" Grid.Column="1" Style="{StaticResource ErrorText}" Margin="0,12,0,0"
                        Visibility="Collapsed"/>
         </Grid>
+        </StackPanel>
+        </ScrollViewer>
         <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right">
             <Button Content="취소" Style="{StaticResource LinkButton}" Margin="0,0,24,0" Click="Cancel_Click"/>
             <Button x:Name="SaveButton" Style="{StaticResource GoldButton}" Padding="44,12" Click="Save_Click"

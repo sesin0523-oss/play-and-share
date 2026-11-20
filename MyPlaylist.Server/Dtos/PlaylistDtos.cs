@@ -127,4 +127,32 @@ namespace MyPlaylist.Server.Dtos
         [Required, MinLength(1)]
         public List<int> TrackIds { get; set; } = new();
     }
+    // AI 플레이리스트 초안 요청 ("비 오는 밤에 듣기 좋은 잔잔한 인디" 같은 한 문장)
+    public class AiDraftRequest
+    {
+        [Required, StringLength(200, MinimumLength = 2)]
+        public string Prompt { get; set; } = "";
+    }
+    // AI 초안 응답. 저장하지 않고 만들기 화면에 채워 넣기만 한다.
+    public class AiDraftResponse
+    {
+        public string PlaylistTitle { get; set; } = "";
+        public string? Description { get; set; }
+        public List<string> Tags { get; set; } = new();
+        // AI가 고른 가수 이름. YouTube 검색어로 쓰고 화면에 "이 가수들로 찾았어요"로 보여 준다.
+        public List<string> SearchQueries { get; set; } = new();
+        public List<AiDraftTrack> Tracks { get; set; } = new();
+        // YouTube 검색을 못 했을 때 등 안내 문구 (없으면 null)
+        public string? Notice { get; set; }
+    }
+    // 초안의 곡 후보. 모두 실제 영상이며 AI가 곡 이름을 지어낼 수 없다.
+    public class AiDraftTrack
+    {
+        public string YoutubeVideoId { get; set; } = "";
+        public string MusicTitle { get; set; } = "";
+        public string? Artist { get; set; }
+        public string ThumbnailUrl { get; set; } = "";
+        // "playlist" = 같은 태그의 인기 플레이리스트에 담긴 곡, "youtube" = AI 검색어로 찾은 영상
+        public string Source { get; set; } = "";
+    }
 }

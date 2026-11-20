@@ -49,6 +49,13 @@
    dotnet user-secrets set "YouTube:ApiKey" "본인의_키" --project MyPlaylist.Server
    ```
 
+   (선택) AI 초안 기능을 쓰려면 [Ollama](https://ollama.com)를 설치하고 오픈소스 모델을 받습니다. 모델과 주소는 `appsettings.json`의 `Ai` 항목에서 바꿀 수 있습니다. Ollama가 꺼져 있어도 다른 기능은 그대로 동작합니다.
+
+   ```bash
+   ollama pull exaone3.5:7.8b
+   ```
+
+   Intel 내장 GPU가 있는 노트북은 환경 변수 `OLLAMA_IGPU_ENABLE=1`을 켜고 Ollama를 다시 시작하면 약 1.5배 빨라집니다.
 4. `dotnet run --project MyPlaylist.Server` 후 http://localhost:5080/swagger 를 엽니다. 요청 예시는 `MyPlaylist.Server/MyPlaylist.Server.http`에 있습니다.
 5. Swagger에서 `POST /api/users/signup`으로 가입하고 `POST /api/users/login`으로 로그인합니다. 로그인하면 쿠키가 저장되어 이후 요청에 자동으로 함께 전송됩니다.
 
@@ -83,8 +90,8 @@
 | 403 | 본인이나 소유자가 아니거나 비공개 플레이리스트 |
 | 404 | 대상 없음 |
 | 409 | 중복 좋아요, 중복 아이디 |
-| 502 / 504 | YouTube 호출 실패 / 응답 시간 초과 |
-| 503 | YouTube API 키 미설정, 할당량 초과 또는 키 사용 제한 |
+| 502 / 504 | YouTube·AI 호출 실패 / 응답 시간 초과 |
+| 503 | YouTube API 키 미설정, 할당량 초과 또는 키 사용 제한, AI 서버(Ollama) 꺼짐 또는 모델 없음 |
 
 ## 기능 단위 정리
 
@@ -98,6 +105,7 @@
 | 좋아요 | `PlaylistLikesController`, `PlaylistsController` | 5 | |
 | 통계 | `StatisticsController` | 6 | |
 | YouTube 검색 | `YouTubeController`, `YouTubeSearchService` | 1 | |
+| AI 초안 | `AiController`, `OllamaService` | 1 | |
 
 ### 회원
 
@@ -220,6 +228,32 @@ YouTube 검색 결과를 플레이리스트에 추가합니다. 같은 영상을
 응답의 `youtubeVideoId`, `musicTitle`, `artist`를 곡 추가 API에 그대로 보내면 됩니다.
 
 클라이언트는 YouTube를 직접 호출하지 말고 이 API를 사용해 주세요. 키는 서버에만 둡니다. 검색 1회에 일일 할당량(기본 10,000) 중 100을 사용하므로 하루 약 100회까지 검색할 수 있습니다.
+
+### AI 플레이리스트 초안
+
+| Method | URL | 기능 | 실패 |
+|---|---|---|---|
+| POST 🔒 | `/api/ai/playlist-draft` | 분위기 한 문장 → 제목·설명·태그·곡 후보 (저장하지 않음) | 400, 401, 502, 503, 504 |
+
+```json
+// 요청
+{ "prompt": "카페에서 공부할 때 틀어 둘 재즈" }
+// 응답
+{ "playlistTitle": "Study Sip Jazz", "description": "...", "tags": ["집중할 때", "잔잔한", "재즈"],
+  "searchQueries": ["Norah Jones", "Chet Baker", "Bill Evans Trio"],
+  "tracks": [{ "youtubeVideoId": "...", "musicTitle": "Norah Jones - Don't Know Why", "artist": "norahjonesVEVO", "thumbnailUrl": "...", "source": "youtube" }],
+  "notice": null }
+```
+
+이 PC에서 돌리는 오픈소스 언어 모델(Ollama, 기본 `exaone3.5:7.8b`)을 씁니다. 작은 모델은 **곡 이름을 지어내기 때문에** 곡은 AI에게 맡기지 않습니다.
+
+1. AI는 제목, 설명, 태그(저장 규칙에 맞게 정리), 분위기에 어울리는 **가수 3명**만 만듭니다.
+2. 곡 후보는 실제 데이터에서 고릅니다. 같은 태그가 붙은 인기 공개 플레이리스트의 곡(`source: "playlist"`, 최대 4곡)과 AI가 고른 가수로 YouTube를 검색한 영상(`source: "youtube"`)을 합쳐 최대 10곡입니다.
+3. 검색 결과 중 한 시간짜리 모음·믹스 영상, 그리고 제목이나 채널에 그 가수 이름이 없는 영상은 뺍니다. AI가 없는 가수를 지어내도 엉뚱한 영상이 들어가지 않게 하기 위해서입니다.
+
+YouTube 할당량은 초안 1회에 300(가수 3명 × 검색 1회)을 씁니다. YouTube 키가 없거나 검색에 실패하면 `notice`에 안내를 담아 나머지 결과만 돌려줍니다. Ollama가 꺼져 있거나 모델이 없으면 503, 응답이 90초를 넘기면 504, AI가 JSON 형식으로 답하지 않으면 502입니다.
+
+노트북(Core Ultra X7 358H, RAM 32GB, CPU만 사용)에서 초안 1회에 6~16초가 걸렸습니다. 처음 요청은 모델을 불러오느라 몇 초 더 걸립니다.
 
 ## 요구사항 대조
 

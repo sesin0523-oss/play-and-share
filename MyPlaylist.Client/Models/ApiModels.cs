@@ -124,6 +124,27 @@ namespace MyPlaylist.Client.Models
         public string ThumbnailUrl { get; set; } = "";
         public string YoutubeUrl { get; set; } = "";
     }
+    // AI 플레이리스트 초안 응답 (저장 전 만들기 화면에 채워 넣는다)
+    public class AiDraft
+    {
+        public string PlaylistTitle { get; set; } = "";
+        public string? Description { get; set; }
+        public List<string> Tags { get; set; } = new();
+        // AI가 고른 가수 (YouTube 검색어로 쓴 이름)
+        public List<string> SearchQueries { get; set; } = new();
+        public List<AiDraftTrack> Tracks { get; set; } = new();
+        public string? Notice { get; set; }
+    }
+    public class AiDraftTrack
+    {
+        public string YoutubeVideoId { get; set; } = "";
+        public string MusicTitle { get; set; } = "";
+        public string? Artist { get; set; }
+        public string ThumbnailUrl { get; set; } = "";
+        // "playlist" = 같은 태그의 인기 플레이리스트에서, "youtube" = AI가 고른 가수로 검색
+        public string Source { get; set; } = "";
+        public string SourceText => Source == "playlist" ? "인기 플레이리스트에서" : "YouTube 검색";
+    }
     // 내 활동 통계 응답
     public class MyStatistics
     {

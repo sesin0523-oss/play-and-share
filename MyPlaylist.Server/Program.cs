@@ -24,6 +24,12 @@ builder.Services.AddHttpClient<YouTubeSearchService>(client =>
 {
     client.Timeout = TimeSpan.FromSeconds(10);
 });
+// AI 초안용 오픈소스 언어 모델(Ollama) 등록
+// 노트북 CPU에서는 첫 요청이 모델을 불러오느라 20초 넘게 걸릴 수 있다.
+builder.Services.AddHttpClient<OllamaService>(client =>
+{
+    client.Timeout = TimeSpan.FromSeconds(90);
+});
 // 쿠키 로그인 세션 등록
 // API이므로 로그인 페이지로 이동시키지 않고 상태 코드만 돌려준다.
 builder.Services

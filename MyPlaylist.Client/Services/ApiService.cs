@@ -18,6 +18,8 @@ namespace MyPlaylist.Client.Services
     public class ApiService
     {
         private readonly HttpClient client;
+        // AI 초안은 노트북에서 언어 모델을 돌리느라 20초를 넘길 수 있어 시간 제한을 따로 둔다.
+        private readonly HttpClient slowClient;
         public ApiService()
         {
             // 로그인 쿠키를 유지하도록 HttpClient 하나를 계속 사용한다.
@@ -32,6 +34,12 @@ namespace MyPlaylist.Client.Services
             {
                 BaseAddress = new Uri(serverUrl),
                 Timeout = TimeSpan.FromSeconds(20)
+            };
+            // 같은 handler를 써서 로그인 쿠키를 함께 쓴다.
+            slowClient = new HttpClient(handler, false)
+            {
+                BaseAddress = new Uri(serverUrl),
+                Timeout = TimeSpan.FromSeconds(120)
             };
         }
         // ----------------------
@@ -265,6 +273,14 @@ namespace MyPlaylist.Client.Services
         {
             return await Read<List<YouTubeResult>>(await client.GetAsync(
             $"api/youtube/search?keyword={Uri.EscapeDataString(keyword)}&maxResults=10"));
+        }
+        // ----------------------
+        // AI 초안
+        // ----------------------
+        public async Task<AiDraft> CreateAiDraft(string prompt)
+        {
+            return await Read<AiDraft>(await slowClient.PostAsJsonAsync(
+            "api/ai/playlist-draft", new { prompt }));
         }
         // ----------------------
         // 공통 처리

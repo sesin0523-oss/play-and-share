@@ -285,6 +285,45 @@
                 </Setter.Value>
             </Setter>
         </Style>
+        <!-- 체크 줄: 목록의 한 줄 전체를 눌러 고른다. 고르면 왼쪽 네모를 골드로 채운다. (AI 초안 곡 후보) -->
+        <Style x:Key="CheckRow" TargetType="CheckBox">
+            <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="CheckBox">
+                        <Border x:Name="Row" Background="Transparent" Padding="8,8">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <Border x:Name="Mark" Width="18" Height="18" BorderThickness="1" CornerRadius="1"
+                                        BorderBrush="{DynamicResource SubTextBrush}" Background="Transparent"
+                                        VerticalAlignment="Center" Margin="0,0,14,0">
+                                    <TextBlock x:Name="Tick" Text="✓" FontSize="13" Visibility="Collapsed"
+                                               Foreground="{DynamicResource OnGoldBrush}"
+                                               HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                </Border>
+                                <ContentPresenter Grid.Column="1" VerticalAlignment="Center"/>
+                            </Grid>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Row" Property="Background" Value="{DynamicResource HoverBrush}"/>
+                            </Trigger>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="Mark" Property="Background" Value="{DynamicResource GoldBrush}"/>
+                                <Setter TargetName="Mark" Property="BorderBrush" Value="{DynamicResource GoldBrush}"/>
+                                <Setter TargetName="Tick" Property="Visibility" Value="Visible"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
         <!-- 콤보박스: 입력칸처럼 얇은 밑줄, 펼치면 확인 창 색의 목록 -->
         <Style x:Key="UnderlineComboItem" TargetType="ComboBoxItem">
             <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>

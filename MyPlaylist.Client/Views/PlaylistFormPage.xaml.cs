@@ -19,6 +19,8 @@ namespace MyPlaylist.Client.Views
             SaveButton.Content = existing == null ? "만들기" : "저장";
             if (existing != null)
             {
+                // AI 초안은 새로 만들 때만 쓴다. (수정 화면에서 곡까지 바꾸면 헷갈린다)
+                AiPanel.Visibility = Visibility.Collapsed;
                 PlaylistTitleBox.Text = existing.PlaylistTitle;
                 DescriptionBox.Text = existing.Description;
                 PrivateRadio.IsChecked = !existing.IsPublic;
@@ -157,6 +159,137 @@ namespace MyPlaylist.Client.Views
             button.Click += (_, _) => AddTag(name);
             return button;
         }
+        // ===== AI 초안 =====
+        private bool aiBusy;
+        private void AiPromptBox_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            AiPromptHint.Visibility = AiPromptBox.Text.Length == 0 ? Visibility.Visible : Visibility.Collapsed;
+        }
+        private void AiPromptBox_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Key != Key.Enter)
+                return;
+            e.Handled = true;
+            AiDraft_Click(sender, e);
+        }
+        private async void AiDraft_Click(object sender, RoutedEventArgs e)
+        {
+            string prompt = AiPromptBox.Text.Trim();
+            if (aiBusy)
+                return;
+            if (prompt.Length < 2)
+            {
+                ShowAiStatus("듣고 싶은 분위기를 두 글자 이상 적어 주세요.", true);
+                return;
+            }
+            aiBusy = true;
+            AiButton.IsEnabled = false;
+            AiButton.Content = "만드는 중…";
+            // 노트북에서는 10초 안팎 걸리므로 기다리는 동안 지난 시간을 보여 준다.
+            var started = DateTime.Now;
+            var timer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
+            timer.Tick += (_, _) => ShowAiStatus($"AI가 분위기를 읽고 어울리는 가수를 고르는 중이에요… {(int)(DateTime.Now - started).TotalSeconds}초", false);
+            ShowAiStatus("AI가 분위기를 읽고 어울리는 가수를 고르는 중이에요…", false);
+            timer.Start();
+            try
+            {
+                // 로그인이 풀린 경우(401)는 Nav.Run이 로그인 화면으로 보낸다.
+                await Nav.Run(async () =>
+                {
+                    try
+                    {
+                        ApplyDraft(await Nav.Api.CreateAiDraft(prompt));
+                    }
+                    catch (ApiException ex) when (ex.StatusCode != System.Net.HttpStatusCode.Unauthorized)
+                    {
+                        ShowAiStatus(ex.Message, true);
+                    }
+                    catch (System.Net.Http.HttpRequestException)
+                    {
+                        ShowAiStatus("서버에 연결할 수 없어요. 서버가 실행 중인지 확인해 주세요.", true);
+                    }
+                    catch (TaskCanceledException)
+                    {
+                        ShowAiStatus("AI 응답이 너무 오래 걸려요. 잠시 후 다시 시도해 주세요.", true);
+                    }
+                });
+            }
+            finally
+            {
+                timer.Stop();
+                aiBusy = false;
+                AiButton.IsEnabled = true;
+                AiButton.Content = "초안 만들기";
+            }
+        }
+        private void ShowAiStatus(string text, bool error)
+        {
+            AiStatus.Text = text;
+            AiStatus.SetResourceReference(TextBlock.ForegroundProperty, error ? "DangerBrush" : "SubTextBrush");
+            AiStatus.Visibility = Visibility.Visible;
+        }
+        // 초안을 입력칸에 채운다. 저장하기 전까지 마음대로 고칠 수 있다.
+        private void ApplyDraft(AiDraft draft)
+        {
+            PlaylistTitleBox.Text = draft.PlaylistTitle;
+            DescriptionBox.Text = draft.Description ?? "";
+            SelectedTags = draft.Tags.Take(MaxTags).ToList();
+            ErrorLabel.Visibility = Visibility.Collapsed;
+            RenderSelectedTags();
+            AiTrackList.Children.Clear();
+            foreach (var track in draft.Tracks)
+                AiTrackList.Children.Add(MakeTrackRow(track));
+            bool hasTracks = draft.Tracks.Count > 0;
+            var trackVisibility = hasTracks ? Visibility.Visible : Visibility.Collapsed;
+            AiTracksLabel.Visibility = trackVisibility;
+            AiTracksPanel.Visibility = trackVisibility;
+            AiTracksCount.Visibility = trackVisibility;
+            AiTracksInfo.Text = draft.SearchQueries.Count > 0
+            ? $"AI가 고른 가수: {string.Join(", ", draft.SearchQueries)}  ·  체크한 곡이 만들기와 함께 담겨요"
+            : "체크한 곡이 만들기와 함께 담겨요";
+            UpdateTrackCount();
+            string done = hasTracks
+            ? $"초안을 채웠어요. 곡 후보 {draft.Tracks.Count}개를 확인하고 마음대로 고쳐서 만들어 주세요."
+            : "제목·설명·태그를 채웠어요. 어울리는 곡은 찾지 못해서, 만든 뒤 직접 추가해 주세요.";
+            ShowAiStatus(draft.Notice == null ? done : $"{done} ({draft.Notice})", false);
+        }
+        private CheckBox MakeTrackRow(AiDraftTrack track)
+        {
+            var image = new Image { Width = 96, Height = 54, Stretch = System.Windows.Media.Stretch.UniformToFill, Margin = new Thickness(0, 0, 14, 0) };
+            Thumb.SetUrl(image, track.ThumbnailUrl);
+            var title = new TextBlock { Text = track.MusicTitle, FontSize = 15, TextTrimming = TextTrimming.CharacterEllipsis };
+            title.SetResourceReference(TextBlock.ForegroundProperty, "TextBrush");
+            var sub = new TextBlock
+            {
+                Text = string.IsNullOrWhiteSpace(track.Artist) ? track.SourceText : $"{track.Artist}  ·  {track.SourceText}",
+                Style = (Style)FindResource("SubText"),
+                Margin = new Thickness(0, 4, 0, 0),
+                TextTrimming = TextTrimming.CharacterEllipsis
+            };
+            var text = new StackPanel { VerticalAlignment = VerticalAlignment.Center, Children = { title, sub } };
+            var grid = new Grid();
+            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+            grid.ColumnDefinitions.Add(new ColumnDefinition());
+            Grid.SetColumn(text, 1);
+            grid.Children.Add(image);
+            grid.Children.Add(text);
+            var row = new CheckBox { Content = grid, Style = (Style)FindResource("CheckRow"), IsChecked = true, Tag = track };
+            AutomationProperties.SetName(row, $"{track.MusicTitle} 담기");
+            row.Checked += (_, _) => UpdateTrackCount();
+            row.Unchecked += (_, _) => UpdateTrackCount();
+            return row;
+        }
+        private List<AiDraftTrack> CheckedTracks()
+        {
+            return AiTrackList.Children.OfType<CheckBox>()
+            .Where(c => c.IsChecked == true)
+            .Select(c => (AiDraftTrack)c.Tag)
+            .ToList();
+        }
+        private void UpdateTrackCount()
+        {
+            AiTracksCount.Text = $"{CheckedTracks().Count}곡 선택";
+        }
         private void PlaylistTitleBox_TextChanged(object sender, TextChangedEventArgs e)
         {
             TitleHint.Visibility = PlaylistTitleBox.Text.Length == 0
@@ -175,12 +308,28 @@ namespace MyPlaylist.Client.Views
                 return;
             }
             var tags = SelectedTags;
+            var tracks = existing == null ? CheckedTracks() : new();
             await Nav.Action(async () =>
             {
                 if (existing == null)
                 {
                     var created = await Nav.Api.CreatePlaylist(title, description, isPublic, tags);
+                    // AI 초안에서 체크한 곡을 순서대로 담는다. 한 곡이 실패해도 나머지는 담는다.
+                    int failed = 0;
+                    foreach (var track in tracks)
+                    {
+                        try
+                        {
+                            await Nav.Api.AddTrack(created.PlaylistId, track.YoutubeVideoId, track.MusicTitle, track.Artist);
+                        }
+                        catch (ApiException ex) when (ex.StatusCode != System.Net.HttpStatusCode.Unauthorized)
+                        {
+                            failed++;
+                        }
+                    }
                     Nav.Replace(new DetailPage(created.PlaylistId));
+                    if (failed > 0)
+                        await Nav.Alert($"곡 {failed}개를 담지 못했어요. 상세 화면에서 직접 추가해 주세요.");
                     return;
                 }
                 await Nav.Api.UpdatePlaylist(
