@@ -24,7 +24,7 @@ namespace MyPlaylist.Server.Controllers
         private static readonly string[] CompilationWords =
         {
             "playlist", "플레이리스트", "플리", "모음", "연속", "1시간", "hour", "mix", "full album", "full set", "kpop chart", "ai cover",
-            "station", "24/7", "radio", "best of", "greatest hits", "most loved", "베스트"
+            "station", "24/7", "radio", "best of", "greatest hits", "most loved", "베스트", "전곡", "(full)"
         };
         private readonly AppDbContext db;
         private readonly OllamaService ai;
